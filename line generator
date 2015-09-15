@@ -1,0 +1,54 @@
+import math
+from qgis.core import QgsFeature
+
+pointLayerName = "point" #change to whatever name of point layer is
+lineLayerName = "lines" #change to whatever name of line layer is
+#be sure to draw one point, leave line layer empty
+
+#find layer objects by name 
+
+layers = QgsMapLayerRegistry.instance().mapLayers()
+for name, layer in layers.iteritems():
+    print "%s %s" % (layer.name(),layer)
+    if layer.name() == lineLayerName:
+        lineLayer = layer
+    if layer.name() == pointLayerName:
+        pointLayer = layer
+        
+assert pointLayer != None
+assert lineLayer != None
+
+#find point by ID 
+
+expr = QgsExpression( "id=1" )
+it = pointLayer.getFeatures( QgsFeatureRequest( expr ) )
+for f in it:
+    geompoint = f.geometry()
+    pivot = geompoint.asPoint()
+    break
+    
+#generate lines from provided degrees (LOBs) 
+ 
+lineLayer.beginEditCommand("Add Spokes")
+provider = lineLayer.dataProvider()
+lobfeat = lineLayer.getFeatures()  
+for x in lobfeat:
+    lobvals = x.attributes()
+    lob = lobvals[1] #searches column 2 of line feature for LOBs
+  
+#generate lines according to LOB readings
+
+linefeatures=[]
+for ang in range(0,360,1):
+    if ang == lob: 
+        geomspoke = QgsGeometry.fromPolyline([QgsPoint(0.0,0.0),QgsPoint(0.0,10.0)]) 
+        geomspoke.rotate(float(ang),QgsPoint(0.0,0.0))
+        geomspoke.translate(pivot.x(),pivot.y())
+        print geomspoke.exportToWkt(6)
+        spokefeat = QgsFeature()
+        spokefeat.setGeometry(geomspoke)
+        linefeatures.append(spokefeat)
+provider.addFeatures(linefeatures)
+lineLayer.commitChanges()
+lineLayer.endEditCommand()
+print "Done!"
