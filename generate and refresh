@@ -1,0 +1,52 @@
+
+import math
+import csv
+import shapefile  # for csvreader
+
+import qgis.utils
+from PyQt4.QtCore import QFileSystemWatcher  # for layer refresher
+
+# Change this to point to your shapefile
+sf = shapefile.Reader('/home/usrp1/Desktop/gistests/line_points.shp')
+
+shapes = sf.shapes()
+x, y = (shapes[0].points[0])
+
+del sf # Not sure how to close a shapefile
+
+def CSVread():
+    w = shapefile.Writer(shapefile.POLYLINE)
+
+    w.field('ID' ,'C' ,'16')
+    w.field('LOB' ,'N' ,'8')
+
+# Replace with your own CSV file
+
+    with open('/home/usrp1/Desktop/lobfeaturecsv.csv') as line_in:
+        reader = csv.reader(line_in, delimiter=',')
+        for rec in reader:
+            # print(rec)
+            no, angle = rec[0], float(rec[1])
+            line_len = 10
+            angle_rad = math.radians(angle)
+            dx = line_len* math.sin(angle_rad)
+            dy = line_len * math.cos(angle_rad)
+            x2, y2 = x + dx, y + dy
+            w.line(parts=[[[x, y], [x2, y2]]])
+            w.record(ID=no, LOB=angle)
+
+    w.save('/home/usrp1/Desktop/gistests/line_points.shp')
+
+
+lineLayerName = "line_points"
+
+
+def refreshLayer():
+    lineLayerName.setCacheImage(None)
+    lineLayerName.triggerRepaint()
+
+
+watcher = QFileSystemWatcher()
+watcher.addPath('/home/usrp1/Desktop/lobfeaturecsv.csv')
+watcher.fileChanged.connect(refreshLayer)
+watcher.fileChanged.connect(CSVread)
