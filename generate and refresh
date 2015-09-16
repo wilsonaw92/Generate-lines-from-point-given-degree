@@ -7,7 +7,7 @@ import qgis.utils
 from PyQt4.QtCore import QFileSystemWatcher  # for layer refresher
 
 # Change this to point to your shapefile
-sf = shapefile.Reader('/home/usrp1/Desktop/gistests/line_points.shp')
+sf = shapefile.Reader('/line/shp/path')
 
 shapes = sf.shapes()
 x, y = (shapes[0].points[0])
@@ -22,7 +22,7 @@ def CSVread():
 
 # Replace with your own CSV file
 
-    with open('/home/usrp1/Desktop/lobfeaturecsv.csv') as line_in:
+    with open('/csv/path') as line_in:
         reader = csv.reader(line_in, delimiter=',')
         for rec in reader:
             # print(rec)
@@ -35,10 +35,10 @@ def CSVread():
             w.line(parts=[[[x, y], [x2, y2]]])
             w.record(ID=no, LOB=angle)
 
-    w.save('/home/usrp1/Desktop/gistests/line_points.shp')
+    w.save('/line/shp/path')
 
 
-lineLayerName = "line_points"
+lineLayerName = '/line/shp/path' #or name of feature in table of contents in double quotes 
 
 
 def refreshLayer():
@@ -47,6 +47,6 @@ def refreshLayer():
 
 
 watcher = QFileSystemWatcher()
-watcher.addPath('/home/usrp1/Desktop/lobfeaturecsv.csv')
+watcher.addPath('/csv/path')
 watcher.fileChanged.connect(refreshLayer)
 watcher.fileChanged.connect(CSVread)
