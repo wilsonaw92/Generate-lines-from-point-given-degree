@@ -37,7 +37,7 @@ def csvLinkRefresh():
     w.field('ID', 'C', '16') #name, data type, max length
     w.field('LOB', 'N', '8')
 
-    with open('/home/usrp1/Desktop/lobfeaturecsv.csv') as line_in:
+    with open('/path/to/lob/csv') as line_in:
         reader = csv.reader(line_in, delimiter=',')
         for rec in reader:
         # print(rec)
@@ -50,11 +50,11 @@ def csvLinkRefresh():
             w.line(parts=[[[x, y], [x2, y2]]])
             w.record(ID=no, LOB=angle)
 
-    w.save('/home/usrp1/Desktop/gistests/line_points.shp')
+    w.save('/path/to/line/shapefile')
     lineLayer.setCacheImage(None)
     lineLayer.triggerRepaint()
 
 
 watcher = QFileSystemWatcher()
-watcher.addPath('/home/usrp1/Desktop/lobfeaturecsv.csv')
+watcher.addPath('/path/to/lob/csv')
 watcher.fileChanged.connect(refreshLayer)
