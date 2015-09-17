@@ -1,52 +1,70 @@
-
 import math
 import csv
-import shapefile  # for csvreader
-
+import shapefile #pyshp library
 import qgis.utils
-from PyQt4.QtCore import QFileSystemWatcher  # for layer refresher
+from PyQt4.QtCore import QFileSystemWatcher
+from qgis.core import QgsFeature
 
-# Change this to point to your shapefile
-sf = shapefile.Reader('/line/shp/path')
+lineLayerName = "line_points"
+csvName = "lobfeaturecsv"
 
-shapes = sf.shapes()
-x, y = (shapes[0].points[0])
+layers = QgsMapLayerRegistry.instance().mapLayers()
+for name, layer in layers.iteritems():
+    print "%s %s" % (layer.name(),layer)
+    if layer.name() == lineLayerName:
+        lineLayer = layer
+    if layer.name() == csvName:
+        csvLayer = layer
+        
+assert lineLayer != None
+assert csvLayer != None
 
-del sf # Not sure how to close a shapefile
+def refreshLayer():
+    lineLayer.setCacheImage(None)
+    lineLayer.triggerRepaint()
+    
+lineLOB = lineLayer.getFeatures() #look at contents of features in QGIS
+for lob in lineLOB:
+    lobVals = lob.attributes() #look at attributes (tables) specifically
+    loblist = lobVals[1] #look at LOB column in line layer
+csvLOB = csvLayer.getFeatures()
+for clob in csvLOB:
+    clobVals = clob.attributes()
+    cloblist = clobVals[1] #look at LOB column in CSV layer
+ 
+if cloblist != loblist: #should this say something like "if (cloblist == loblist) == False:?
+   
+    sf = shapefile.Reader('/home/usrp1/Desktop/gistests/line_points.shp')
 
-def CSVread():
+    shapes = sf.shapes()
+    x, y = (shapes[0].points[0])
+
+    del sf 
+
     w = shapefile.Writer(shapefile.POLYLINE)
 
-    w.field('ID' ,'C' ,'16')
-    w.field('LOB' ,'N' ,'8')
+    w.field('ID','C','16')
+    w.field('LOB','N','8')
 
-# Replace with your own CSV file
-
-    with open('/csv/path') as line_in:
+    with open('/home/usrp1/Desktop/lobfeaturecsv.csv') as line_in:
         reader = csv.reader(line_in, delimiter=',')
         for rec in reader:
-            # print(rec)
+            #print(rec)
             no, angle = rec[0], float(rec[1])
             line_len = 10
             angle_rad = math.radians(angle)
-            dx = line_len* math.sin(angle_rad)
-            dy = line_len * math.cos(angle_rad)
-            x2, y2 = x + dx, y + dy
-            w.line(parts=[[[x, y], [x2, y2]]])
+            dx = line_len*math.sin(angle_rad)
+            dy = line_len*math.cos(angle_rad)
+            x2, y2 = x+dx, y+dy
+            w.line(parts=[[[x,y],[x2,y2]]])
             w.record(ID=no, LOB=angle)
+        
+    w.save('/home/usrp1/Desktop/gistests/line_points.shp')
 
-    w.save('/line/shp/path')
-
-
-lineLayerName = '/line/shp/path' #or name of feature in table of contents in double quotes 
-
-
-def refreshLayer():
-    lineLayerName.setCacheImage(None)
-    lineLayerName.triggerRepaint()
-
-
-watcher = QFileSystemWatcher()
-watcher.addPath('/csv/path')
-watcher.fileChanged.connect(refreshLayer)
-watcher.fileChanged.connect(CSVread)
+    watcher = QFileSystemWatcher() 
+    watcher.addPath('/home/usrp1/Desktop/lobfeaturecsv.csv')
+    watcher.fileChanged.connect(refreshLayer)
+else:
+    watcher = QFileSystemWatcher() 
+    watcher.addPath('/home/usrp1/Desktop/lobfeaturecsv.csv')
+    watcher.fileChanged.connect(refreshLayer)
