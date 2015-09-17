@@ -1,0 +1,21 @@
+import qgis.utils
+from PyQt4.QtCore import QFileSystemWatcher
+from qgis.core import QgsFeature
+
+lineLayerName = "line_points"
+
+layers = QgsMapLayerRegistry.instance().mapLayers()
+for name, layer in layers.iteritems():
+    print "%s %s" % (layer.name(),layer)
+    if layer.name() == lineLayerName:
+        lineLayer = layer
+
+assert lineLayer != None
+
+def refreshLayer():
+    lineLayer.setCacheImage(None)
+    lineLayer.triggerRepaint()
+
+watcher = QFileSystemWatcher() 
+watcher.addPath('/home/usrp1/Desktop/lobfeaturecsv.csv')
+watcher.fileChanged.connect(refreshLayer)
