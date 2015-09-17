@@ -1,0 +1,60 @@
+import math
+import csv
+import shapefile  #via pyshp
+import qgis.utils
+from PyQt4.QtCore import QFileSystemWatcher
+from qgis.core import QgsFeature
+
+lineLayerName = "linename" #name of feature in QGIS
+pointLayerName = "pointname"
+
+#find layers by name
+
+layers = QgsMapLayerRegistry.instance().mapLayers()
+for name, layer in layers.iteritems():  
+    print "%s %s" % (layer.name(), layer)  
+    if layer.name() == lineLayerName:  
+        lineLayer = layer
+    if layer.name() == pointLayerName:  
+        pointLayer = layer
+
+assert lineLayer != None
+assert pointLayer != None
+
+#find csv point layer, link to line feature, generate lines
+
+def csvLinkRefresh():
+    
+    thief = csv.Reader(pointLayer)
+
+    shapes = thief.shapes()
+    x, y = (shapes[0].points[0])
+
+    del thief
+
+    w = shapefile.Writer(shapefile.POLYLINE)
+
+    w.field('ID', 'C', '16') #name, data type, max length
+    w.field('LOB', 'N', '8')
+
+    with open('/home/usrp1/Desktop/lobfeaturecsv.csv') as line_in:
+        reader = csv.reader(line_in, delimiter=',')
+        for rec in reader:
+        # print(rec)
+            no, angle = rec[0], float(rec[1])
+            line_len = 10
+            angle_rad = math.radians(angle)
+            dx = line_len * math.sin(angle_rad)
+            dy = line_len * math.cos(angle_rad)
+            x2, y2 = x + dx, y + dy
+            w.line(parts=[[[x, y], [x2, y2]]])
+            w.record(ID=no, LOB=angle)
+
+    w.save('/home/usrp1/Desktop/gistests/line_points.shp')
+    lineLayer.setCacheImage(None)
+    lineLayer.triggerRepaint()
+
+
+watcher = QFileSystemWatcher()
+watcher.addPath('/home/usrp1/Desktop/lobfeaturecsv.csv')
+watcher.fileChanged.connect(refreshLayer)
