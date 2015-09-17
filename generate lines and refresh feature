@@ -25,12 +25,12 @@ assert pointLayer != None
 
 def csvLinkRefresh():
     
-    thief = csv.Reader(pointLayer)
+    point = csv.Reader(pointLayer)
 
     shapes = thief.shapes()
     x, y = (shapes[0].points[0])
 
-    del thief
+    del point
 
     w = shapefile.Writer(shapefile.POLYLINE)
 
