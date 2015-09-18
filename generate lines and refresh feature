@@ -57,4 +57,4 @@ def csvLinkRefresh():
 
 watcher = QFileSystemWatcher()
 watcher.addPath('/path/to/lob/csv')
-watcher.fileChanged.connect(refreshLayer)
+watcher.fileChanged.connect(csvLinkRefresh)
