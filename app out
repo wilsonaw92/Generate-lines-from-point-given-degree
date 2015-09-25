@@ -1,0 +1,198 @@
+from ui_explorerWindow import Ui_ExplorerWindow
+import resources_rc
+
+import os, os.path, sys
+import math  
+import csv  
+import shapefile  
+import qgis.utils  
+from qgis.core import *
+from qgis.gui import *
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
+
+
+class MapExplorer(QMainWindow, Ui_ExplorerWindow):
+    def __init__(self):
+        QMainWindow.__init__(self)
+
+        self.setupUi(self)
+        self.connect(self.actionQuit,
+                     SIGNAL("triggered()"), qApp.quit)
+        self.connect(self.actionShowBasemapLayer,
+                     SIGNAL("triggered()"), self.showBasemapLayer)
+        self.connect(self.actionShowLandmarkLayer,
+                     SIGNAL("triggered()"),
+                     self.showLandmarkLayer)
+        self.connect(self.actionShowRoadsLayer,
+                     SIGNAL("triggered()"), self.showRoadsLayer)
+        self.connect(self.actionShowLobLayer,
+                     SIGNAL("triggered()"), self.showLobLayer)
+        self.connect(self.actionZoomIn,
+                     SIGNAL("triggered()"), self.zoomIn)
+        self.connect(self.actionZoomOut,
+                     SIGNAL("triggered()"), self.zoomOut)
+        self.connect(self.actionPan,
+                     SIGNAL("triggered()"), self.setPanMode)
+        self.connect(self.actionExplore,
+                     SIGNAL("triggered()"), self.setExploreMode)
+
+        self.mapCanvas = QgsMapCanvas()
+        self.mapCanvas.useImageToRender(False)
+        self.mapCanvas.setCanvasColor(Qt.white)
+        self.mapCanvas.show()
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.mapCanvas)
+        self.centralWidget.setLayout(layout)
+
+        self.actionShowBasemapLayer.setChecked(True)
+        self.actionShowLandmarkLayer.setChecked(True)
+        self.actionShowRoadsLayer.setChecked(True)
+        self.actionShowLobLayer.setChecked(True)
+
+        self.panTool = PanTool(self.mapCanvas)
+        self.panTool.setAction(self.actionPan)
+
+    def loadMap(self):
+        cur_dir = os.path.dirname(os.path.realpath(__file__))  # google maps script instead?
+        filename = os.path.join(cur_dir, "data","NE1_50M_SR_W.tif")
+        self.basemap_layer = QgsRasterLayer(filename, "basemap")
+        QgsMapLayerRegistry.instance().addMapLayer(
+            self.basemap_layer)
+
+        filename = os.path.join(cur_dir, "data", "ne_10m_roads.shp")
+        self.roads_layer = QgsVectorLayer(filename, "roads", "ogr")
+        QgsMapLayerRegistry.instance().addMapLayer(self.roads_layer)
+
+        filename = "/home/usrp3/Desktop/PyQGISLearn/appfiles/data/thiefsymbolcsv.csv?delimiter=%s&crs=epsg:3857&xField=%s&yField=%s" % (
+        ",", "X", "Y")
+        self.thieflayer = QgsVectorLayer(filename, "thief", "delimitedtext")
+        QgsMapLayerRegistry.instance().addMapLayer(self.thieflayer)  # load thief (locally so far)
+
+        filename = os.path.join(cur_dir, "data", "line_points.shp")
+        self.loblayer = QgsVectorLayer(filename, "lobs", "ogr")
+        QgsMapLayerRegistry.instance().addMapLayer(self.loblayer)
+
+        self.showVisibleMapLayers()
+        self.mapCanvas.setExtent(QgsRectangle(-127.7, 24.4, -79.3, 49.1))
+
+    # GENERATE LINES ACCORDING TO CSV DATA
+    def csvLobRefresh(self):
+
+        thief = shapefile.Reader('/home/usrp3/Desktop/gistests/thiefsymbolcsvshp.shp')  # problematic
+
+        shapes = thief.shapes()
+        x, y = (shapes[0].points[0])
+
+        del thief
+
+        w = shapefile.Writer(shapefile.POLYLINE)
+
+        w.field('ID', 'C', '16')
+        w.field('LOB', 'N', '8')
+        # Frequency Timestamp Tag LOB Latitude Longitude
+
+
+        with open('/home/usrp3/Desktop/PyQGISLearn/appfiles/data/test.csv') as line_in:
+            csv_lines = list(csv.reader(line_in, delimiter=','))
+            reader = csv_lines[len(csv_lines) - 10:]
+            for rec in reversed(reader):
+                # print(rec)
+                no, angle = rec[0], float(rec[5])
+                line_len = 10
+                angle_rad = math.radians(angle)
+                dx = line_len * math.sin(angle_rad)
+                dy = line_len * math.cos(angle_rad)
+                x2, y2 = x + dx, y + dy
+                w.line(parts=[[[x, y], [x2, y2]]])
+                w.record(ID=no, LOB=angle)
+
+        w.save('/home/usrp3/Desktop/PyQGISLearn/appfiles/data/line_points.shp')
+        pt.save('/home/usrp3/Desktop/PyQGISLearn/appfiles/data/thiefsymbolcsv.csv')
+        self.loblayer.setCacheImage(None)
+        self.loblayer.triggerRepaint()
+        self.thieflayer.setCacheImage(None)
+        self.thieflayer.triggerRepaint()
+
+    watcher = QFileSystemWatcher()
+    watcher.addPath('/home/usrp3/Desktop/PyQGISLearn/appfiles/data/line_points.shp')
+    watcher.addPath('/home/usrp3/Desktop/PyQGISLearn/appfiles/data/thiefsymbolcsv.csv')
+    watcher.fileChanged.connect(csvLobRefresh)
+
+
+    def showVisibleMapLayers(self):
+        layers = []
+        if self.actionShowLandmarkLayer.isChecked():
+            layers.append(QgsMapCanvasLayer(self.thieflayer))
+        if self.actionShowBasemapLayer.isChecked():
+            layers.append(QgsMapCanvasLayer(self.basemap_layer))
+        if self.actionShowRoadsLayer.isChecked():
+            layers.append(QgsMapCanvasLayer(self.roads_layer))
+        if self.actionShowLobLayer.isChecked():
+            layers.append(QgsMapCanvasLayer(self.loblayer))
+        self.mapCanvas.setLayerSet(layers)
+
+    def showBasemapLayer(self):
+        self.showVisibleMapLayers()
+
+    def showLandmarkLayer(self):
+        self.showVisibleMapLayers()
+
+    def showRoadsLayer(self):
+        self.showVisibleMapLayers()
+
+    def showLobLayer(self):
+        self.showVisibleMapLayers()
+
+    def zoomIn(self):
+        self.mapCanvas.zoomIn()
+
+    def zoomOut(self):
+        self.mapCanvas.zoomOut()
+
+    def setPanMode(self):
+        self.actionPan.setChecked(True)
+        self.mapCanvas.setMapTool(self.panTool)
+
+    def setExploreMode(self):
+        pass #not coded yet
+
+
+# pan tool
+class PanTool(QgsMapTool):
+    def __init__(self, mapCanvas):
+        QgsMapTool.__init__(self, mapCanvas)
+        self.setCursor(Qt.OpenHandCursor)
+        self.dragging = False
+
+    def canvasMoveEvent(self, event):
+        if event.buttons() == Qt.LeftButton:
+            self.dragging = True
+            self.canvas().panAction(event)
+
+    def canvasReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton and self.dragging:
+            self.canvas().panActionEnd(event.pos())
+            self.dragging = False
+
+
+def main():
+    QgsApplication.setPrefixPath(os.environ['QGIS_PREFIX'], True)
+    QgsApplication.initQgis()
+
+    app = QApplication(sys.argv)
+
+    window = MapExplorer()
+    window.show()
+    window.raise_()
+    window.loadMap()
+    window.setPanMode()
+    app.exec_()
+    app.deleteLater()
+    QgsApplication.exitQgis()
+
+
+if __name__ == "__main__":
+    main()
