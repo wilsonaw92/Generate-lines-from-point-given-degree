@@ -56,7 +56,7 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
         self.panTool.setAction(self.actionPan)
 
     def loadMap(self):
-        cur_dir = os.path.dirname(os.path.realpath(__file__))  # google maps script instead?
+        cur_dir = os.path.dirname(os.path.realpath(__file__))  
         filename = os.path.join(cur_dir, "data","NE1_50M_SR_W.tif")
         self.basemap_layer = QgsRasterLayer(filename, "basemap")
         QgsMapLayerRegistry.instance().addMapLayer(
@@ -66,7 +66,7 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
         self.roads_layer = QgsVectorLayer(filename, "roads", "ogr")
         QgsMapLayerRegistry.instance().addMapLayer(self.roads_layer)
 
-        filename = "/home/usrp3/Desktop/PyQGISLearn/appfiles/data/thiefsymbolcsv.csv?delimiter=%s&crs=epsg:3857&xField=%s&yField=%s" % (
+        filename = "/home/me/Desktop/PyQGIS/appfiles/data/thiefsymbolcsv.csv?delimiter=%s&crs=epsg:3857&xField=%s&yField=%s" % (
         ",", "X", "Y")
         self.thieflayer = QgsVectorLayer(filename, "thief", "delimitedtext")
         QgsMapLayerRegistry.instance().addMapLayer(self.thieflayer)  # load thief (locally so far)
@@ -81,7 +81,7 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
     # GENERATE LINES ACCORDING TO CSV DATA
     def csvLobRefresh(self):
 
-        thief = shapefile.Reader('/home/usrp3/Desktop/gistests/thiefsymbolcsvshp.shp')  # problematic
+        thief = shapefile.Reader('/home/me/Desktop/gistests/thiefsymbolcsvshp.shp')  # problematic, work on later
 
         shapes = thief.shapes()
         x, y = (shapes[0].points[0])
@@ -95,7 +95,7 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
         # Frequency Timestamp Tag LOB Latitude Longitude
 
 
-        with open('/home/usrp3/Desktop/PyQGISLearn/appfiles/data/test.csv') as line_in:
+        with open('/home/me/Desktop/PyQGIS/appfiles/data/test.csv') as line_in:
             csv_lines = list(csv.reader(line_in, delimiter=','))
             reader = csv_lines[len(csv_lines) - 10:]
             for rec in reversed(reader):
@@ -109,16 +109,16 @@ class MapExplorer(QMainWindow, Ui_ExplorerWindow):
                 w.line(parts=[[[x, y], [x2, y2]]])
                 w.record(ID=no, LOB=angle)
 
-        w.save('/home/usrp3/Desktop/PyQGISLearn/appfiles/data/line_points.shp')
-        pt.save('/home/usrp3/Desktop/PyQGISLearn/appfiles/data/thiefsymbolcsv.csv')
+        w.save('/home/me/Desktop/PyQGIS/appfiles/data/line_points.shp')
+        pt.save('/home/me/Desktop/PyQGIS/appfiles/data/thiefsymbolcsv.csv')
         self.loblayer.setCacheImage(None)
         self.loblayer.triggerRepaint()
         self.thieflayer.setCacheImage(None)
         self.thieflayer.triggerRepaint()
 
     watcher = QFileSystemWatcher()
-    watcher.addPath('/home/usrp3/Desktop/PyQGISLearn/appfiles/data/line_points.shp')
-    watcher.addPath('/home/usrp3/Desktop/PyQGISLearn/appfiles/data/thiefsymbolcsv.csv')
+    watcher.addPath('/home/me/Desktop/PyQGIS/appfiles/data/line_points.shp')
+    watcher.addPath('/home/me/Desktop/PyQGIS/appfiles/data/thiefsymbolcsv.csv')
     watcher.fileChanged.connect(csvLobRefresh)
 
 
